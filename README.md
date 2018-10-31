@@ -29,7 +29,8 @@ When I change this code to say "#include "cache.h" instead of "#include <cache.h
   
   "collect2: error: ld returned 1 exit status"
 
-Thus there appears to be at least two issues, one in the format of cache.h importation and one linker error. There also appears to be an error where a function returning a non-void value does not return any value. I cannot say anything beyond this because it doesn't compile.
+Thus there appears to be at least two issues, one in the format of cache.h importation and one linker error. I noticed that the cache.cpp file (c++) imports the cache.h file (c). I don't know whether this relates to the linker error.
+There also appears to be an error where a function returning a non-void value does not return any value. I cannot say anything beyond this because it doesn't compile.
 
 #Kathy's Code:
 
