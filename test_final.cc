@@ -189,7 +189,7 @@ void test_get_deleted() {
 }
 
 
-//checks that we don't crash when we delete something absent
+//checks that we don't crash when we delete something absent and space used unaffected
 void test_delete_absent() {
 	uint32_t cache_length = 2;
 	uint32_t size = sizeof(uint32_t);
