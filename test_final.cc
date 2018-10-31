@@ -1,6 +1,6 @@
 // Joe Meyer & Ezra Schwartz
 
-#include "cache.cpp"
+#include "cache_lru.cc"
 
 using namespace std;
 
@@ -189,7 +189,7 @@ void test_get_deleted() {
 }
 
 
-//checks that we don't crash when we delete something absent and space used unaffected
+//checks that we don't crash when we delete something absent
 void test_delete_absent() {
 	uint32_t cache_length = 2;
 	uint32_t size = sizeof(uint32_t);
@@ -284,20 +284,12 @@ int main(){
 	test_evictor_lru();
 	cout << "PASS" << endl;
 
-	cout << "Running test_get_present() \t\t";
-	test_get_present();
-	cout << "PASS" << endl;
-
 	cout << "Running test_get_absent() \t\t";
 	test_get_absent();
 	cout << "PASS" << endl;
 
 	cout << "Running test_get_deleted() \t\t"; 
 	test_get_deleted();
-	cout << "PASS" << endl;
-
-	cout << "Running test_delete_present() \t\t"; 
-	test_delete_present();
 	cout << "PASS" << endl;
 
 	cout << "Running test_delete_absent() \t\t"; 
