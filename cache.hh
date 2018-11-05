@@ -22,12 +22,9 @@ class Cache {
 
   // A function that takes a key and returns an index to the internal data
   using hash_func = std::function<uint32_t(key_type)>;
-  // A function that returns an index to the next element to evict
-  using evictor_type = std::function<uint32_t(void)>;
 
   // Create a new cache object with a given maximum memory capacity.
   Cache(index_type maxmem,
-        evictor_type evictor = [](){ return 0; },
         hash_func hasher = std::hash<std::string>());
 
   ~Cache();
@@ -41,15 +38,18 @@ class Cache {
   // Both the key and the value are to be deep-copied (not just pointer copied).
   // If maxmem capacity is exceeded, sufficient values will be removed
   // from the cache to accomodate the new value.
-  void set(key_type key, val_type val, index_type size);
+  // Returns 0 if no errors ocurred, Some nonzero code otherwise.
+  int set(key_type key, val_type val, index_type size);
 
   // Retrieve a pointer to the value associated with key in the cache,
-  // or NULL if not found.
+  // or nullptr if not found.
   // Sets the actual size of the returned value (in bytes) in val_size.
+  // In case of an error, returns nullptr, and sets val_size to 0.
   val_type get(key_type key, index_type& val_size) const;
 
   // Delete an object from the cache, if it's still there
-  void del(key_type key);
+  // Returns 0 if no errors ocurred, Some nonzero code otherwise.
+  int del(key_type key);
 
   // Compute the total amount of memory used up by all cache values (not keys)
   index_type space_used() const;
