@@ -25,7 +25,6 @@ public:
 		assert(this->eviction_queue_.size()>0 && "nothing to evict\n");
 		next_evict = this->eviction_queue_[0];
 		string next_evict_key = get<1>(next_evict);
-		cout << "evicting '" << next_evict_key << "'\n";
 		this->remove(next_evict_key);
 		return next_evict;
 	}
@@ -87,7 +86,7 @@ struct Cache::Impl {
 	evictor_type evictor_;
 	hash_func hasher_;
 	index_type memused_;
-	LruEvictor Lru_;
+	mutable LruEvictor Lru_;
 
 	std::unordered_map<std::string, void*, hash_func> hashtable_;
 
@@ -108,7 +107,6 @@ struct Cache::Impl {
 		// if the key is already in the table...
 		if(hashtable_.find(key)!=hashtable_.end()) {
 			// remove it from queue (will overwrite it in cache/re-add it to queue later)
-			cout << "overwriting key: '" << key << "'\n";
 			free(hashtable_[key]);
 			memused_ -= Lru_.getsize(key);
 			Lru_.remove(key);
@@ -130,10 +128,10 @@ struct Cache::Impl {
 	// returns cache[key]
 	val_type get(key_type key, index_type& val_size) const {
 		if(hashtable_.find(key)!=hashtable_.end()) {
+			Lru_.remove(key);
+			Lru_.add(val_size, key);
 			return hashtable_.find(key)->second;
-
 		} else {
-			cout << "key '" << key << "' is absent\n";
 			return nullptr;
 		}
 	}
@@ -145,8 +143,6 @@ struct Cache::Impl {
 			hashtable_.erase(key);
 			memused_ -= Lru_.getsize(key);
 			Lru_.remove(key);
-		} else {
-			cout << "key '" << key << "' is already absent\n";
 		}
 	}
 
