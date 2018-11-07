@@ -85,7 +85,6 @@ struct Cache::Impl {
 
 
 	index_type maxmem_;
-	evictor_type evictor_;
 	hash_func hasher_;
 	index_type memused_;
 	mutable EvictorType Evictor_;
@@ -95,7 +94,7 @@ struct Cache::Impl {
 
 	Impl(index_type maxmem, evictor_type evictor, hash_func hasher)
 	: 
-	maxmem_(maxmem), evictor_(evictor_), hasher_(hasher), memused_(0), hashtable_(0 , hasher_), Evictor_()
+	maxmem_(maxmem), Evictor_(EvictorType()), hasher_(hasher), memused_(0), hashtable_(0 , hasher_)
 
 	{
 		assert(maxmem_>0 && "Cache size must be positive");
