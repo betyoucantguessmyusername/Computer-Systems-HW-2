@@ -23,41 +23,41 @@ public:
 	node_type operator()() {
 		node_type next_evict;
 		// EvictorType() is never called on an empty eviction_queue
-		assert(this->eviction_queue_.size()>0 && "nothing to evict\n");
-		next_evict = this->eviction_queue_[0];
+		assert(eviction_queue_.size()>0 && "nothing to evict\n");
+		next_evict = eviction_queue_[0];
 		string next_evict_key = get<1>(next_evict);
-		this->remove(next_evict_key);
+		remove(next_evict_key);
 		return next_evict;
 	}
 
 	// add an element to eviction queue
 	// places it directly after the smallest el. w size >= to it, before smaller el.s
 	void add(uint32_t elt_size, string key) {
-		uint32_t evq_size = this->eviction_queue_.size();
+		uint32_t evq_size = eviction_queue_.size();
 		node_type node = make_tuple(elt_size, key);
 		uint32_t i = 0;
 		for(;i<evq_size; i++) {
-			uint32_t i_size = get<0>(this->eviction_queue_[i]);
+			uint32_t i_size = get<0>(eviction_queue_[i]);
 			if(elt_size>i_size) {
-				this->eviction_queue_.insert(this->eviction_queue_.begin()+i, node);
+				eviction_queue_.insert(eviction_queue_.begin()+i, node);
 			}
 		}
 		if(i>=evq_size) {
-			this->eviction_queue_.push_back(node);
+			eviction_queue_.push_back(node);
 		}
 	}
 
 	// remove an item from ev. q.
 	void remove(string key) {
 		// erase-remove_if idiom
-		this->eviction_queue_.erase(std::remove_if(this->eviction_queue_.begin(), this->eviction_queue_.end(), [key](node_type node){return get<1>(node)==key;}), this->eviction_queue_.end());
+		eviction_queue_.erase(std::remove_if(eviction_queue_.begin(), eviction_queue_.end(), [key](node_type node){return get<1>(node)==key;}), eviction_queue_.end());
 	}
 
 	// get size of key's val
 	uint32_t getsize(string key) {
 		uint32_t i = 0;
-		for(;i<this->eviction_queue_.size(); i++) {
-			node_type node = this->eviction_queue_[i];
+		for(;i<eviction_queue_.size(); i++) {
+			node_type node = eviction_queue_[i];
 			if(get<1>(node) == key) {
 				return get<0>(node);
 			}
