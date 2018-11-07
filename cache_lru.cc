@@ -11,8 +11,8 @@
 
 using namespace std;
 
-// this is a functor (implements LRU)
-// if all val.s are same size it acts as Fifo
+// this is a functor (implements Largest-out-first, to maximize number of values stored)
+// if all val.s are same size it acts as LRU
 class LruEvictor {
 private:
 	vector<tuple<uint32_t, string> > eviction_queue_;
