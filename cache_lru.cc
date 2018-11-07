@@ -10,11 +10,11 @@
 #include <assert.h>
 
 using namespace std;
+using node_type = tuple<uint32_t,string>;
 
 // this is a functor (implements Largest-out-first, to maximize number of values stored)
 // if all val.s are same size it acts as LRU
 class EvictorType {
-using node_type = tuple<uint32_t,string>;
 private:
 	vector<node_type> eviction_queue_;
 	// eviction_queue_ holds nodes of form (val-size, key)
@@ -71,11 +71,11 @@ public:
 
 // These funcs are necessary bc mandatory interface overwrites
 //		``get" func required for tuple element access in Cache class
-string get_tuple_key(tuple<uint32_t, string> node) {
+string get_tuple_key(node_type node) {
 	return get<1>(node);
 }
 
-uint32_t get_tuple_size(tuple<uint32_t, string> node) {
+uint32_t get_tuple_size(node_type node) {
 	return get<0>(node);
 }
 
@@ -114,7 +114,7 @@ struct Cache::Impl {
 			Evictor_.remove(key);
 		} else if(memused_ >= maxmem_) {
 			// get next_evict (also del.s it from ev. q.)
-			tuple<uint32_t, string> next_evict = Evictor_();
+			node_type next_evict = Evictor_();
 			string next_evict_key = get_tuple_key(next_evict);
 			uint32_t next_evict_size = get_tuple_size(next_evict);
 			memused_ -= next_evict_size;
