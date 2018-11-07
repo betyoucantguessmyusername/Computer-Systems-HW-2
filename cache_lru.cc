@@ -105,13 +105,19 @@ struct Cache::Impl {
     ~Impl() = default;
 
 	void set(key_type key, val_type val, index_type size) {
+		if(size>maxmem_) {
+			// don't bother
+			return;
+		}
 		// if the key is already in the table...
 		if(hashtable_.find(key)!=hashtable_.end()) {
 			// remove it from queue (will overwrite it in cache/re-add it to queue later)
 			free(hashtable_[key]);
 			memused_ -= Evictor_.getsize(key);
 			Evictor_.remove(key);
-		} else if(memused_ >= maxmem_) {
+		}
+		memused_ += size;
+		while(memused_ >= maxmem_) {
 			// get next_evict (also del.s it from ev. q.)
 			node_type next_evict = Evictor_();
 			string next_evict_key = get_tuple_key(next_evict);
@@ -122,7 +128,6 @@ struct Cache::Impl {
 		void* newval = new char[size];
 		memcpy(newval, val, size);
 		hashtable_[key] = newval;
-		memused_ += size;
 		Evictor_.add(size, key);
 	}
 
