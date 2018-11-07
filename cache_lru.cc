@@ -13,7 +13,7 @@ using namespace std;
 
 // this is a functor (implements Largest-out-first, to maximize number of values stored)
 // if all val.s are same size it acts as LRU
-class LruEvictor {
+class EvictorType {
 using node_type = tuple<uint32_t,string>;
 private:
 	vector<node_type> eviction_queue_;
@@ -22,7 +22,7 @@ public:
 	// returns next key to evict, also removes it from ev. q
 	node_type operator()() {
 		node_type next_evict;
-		// LruEvictor() is never called on an empty eviction_queue
+		// EvictorType() is never called on an empty eviction_queue
 		assert(this->eviction_queue_.size()>0 && "nothing to evict\n");
 		next_evict = this->eviction_queue_[0];
 		string next_evict_key = get<1>(next_evict);
@@ -88,14 +88,14 @@ struct Cache::Impl {
 	evictor_type evictor_;
 	hash_func hasher_;
 	index_type memused_;
-	mutable LruEvictor Lru_;
+	mutable EvictorType Evictor_;
 
 	std::unordered_map<std::string, void*, hash_func> hashtable_;
 
 
 	Impl(index_type maxmem, evictor_type evictor, hash_func hasher)
 	: 
-	maxmem_(maxmem), evictor_(evictor_), hasher_(hasher), memused_(0), hashtable_(0 , hasher_), Lru_()
+	maxmem_(maxmem), evictor_(evictor_), hasher_(hasher), memused_(0), hashtable_(0 , hasher_), Evictor_()
 
 	{
 		assert(maxmem_>0 && "Cache size must be positive");
@@ -110,11 +110,11 @@ struct Cache::Impl {
 		if(hashtable_.find(key)!=hashtable_.end()) {
 			// remove it from queue (will overwrite it in cache/re-add it to queue later)
 			free(hashtable_[key]);
-			memused_ -= Lru_.getsize(key);
-			Lru_.remove(key);
+			memused_ -= Evictor_.getsize(key);
+			Evictor_.remove(key);
 		} else if(memused_ >= maxmem_) {
 			// get next_evict (also del.s it from ev. q.)
-			tuple<uint32_t, string> next_evict = Lru_();
+			tuple<uint32_t, string> next_evict = Evictor_();
 			string next_evict_key = get_tuple_key(next_evict);
 			uint32_t next_evict_size = get_tuple_size(next_evict);
 			memused_ -= next_evict_size;
@@ -124,14 +124,14 @@ struct Cache::Impl {
 		memcpy(newval, val, size);
 		hashtable_[key] = newval;
 		memused_ += size;
-		Lru_.add(size, key);
+		Evictor_.add(size, key);
 	}
 
 	// returns cache[key]
 	val_type get(key_type key, index_type& val_size) const {
 		if(hashtable_.find(key)!=hashtable_.end()) {
-			Lru_.remove(key);
-			Lru_.add(val_size, key);
+			Evictor_.remove(key);
+			Evictor_.add(val_size, key);
 			return hashtable_.find(key)->second;
 		} else {
 			return nullptr;
@@ -143,8 +143,8 @@ struct Cache::Impl {
 		if(hashtable_.find(key)!=hashtable_.end()) {
 			free(hashtable_[key]);
 			hashtable_.erase(key);
-			memused_ -= Lru_.getsize(key);
-			Lru_.remove(key);
+			memused_ -= Evictor_.getsize(key);
+			Evictor_.remove(key);
 		}
 	}
 
