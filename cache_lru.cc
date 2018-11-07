@@ -14,13 +14,14 @@ using namespace std;
 // this is a functor (implements Largest-out-first, to maximize number of values stored)
 // if all val.s are same size it acts as LRU
 class LruEvictor {
+using node_type = tuple<uint32_t,string>;
 private:
-	vector<tuple<uint32_t, string> > eviction_queue_;
+	vector<node_type> eviction_queue_;
 	// eviction_queue_ holds nodes of form (val-size, key)
 public:
 	// returns next key to evict, also removes it from ev. q
-	tuple<uint32_t,string> operator()() {
-		tuple<uint32_t,string> next_evict;
+	node_type operator()() {
+		node_type next_evict;
 		// LruEvictor() is never called on an empty eviction_queue
 		assert(this->eviction_queue_.size()>0 && "nothing to evict\n");
 		next_evict = this->eviction_queue_[0];
@@ -30,9 +31,10 @@ public:
 	}
 
 	// add an element to eviction queue
+	// places it directly after the smallest el. w size >= to it, before smaller el.s
 	void add(uint32_t elt_size, string key) {
 		uint32_t evq_size = this->eviction_queue_.size();
-		tuple<uint32_t, string> node = make_tuple(elt_size, key);
+		node_type node = make_tuple(elt_size, key);
 		uint32_t i = 0;
 		for(;i<evq_size; i++) {
 			uint32_t i_size = get<0>(this->eviction_queue_[i]);
@@ -48,14 +50,14 @@ public:
 	// remove an item from ev. q.
 	void remove(string key) {
 		// erase-remove_if idiom
-		this->eviction_queue_.erase(std::remove_if(this->eviction_queue_.begin(), this->eviction_queue_.end(), [key](tuple<uint32_t, string> node){return get<1>(node)==key;}), this->eviction_queue_.end());
+		this->eviction_queue_.erase(std::remove_if(this->eviction_queue_.begin(), this->eviction_queue_.end(), [key](node_type node){return get<1>(node)==key;}), this->eviction_queue_.end());
 	}
 
 	// get size of key's val
 	uint32_t getsize(string key) {
 		uint32_t i = 0;
 		for(;i<this->eviction_queue_.size(); i++) {
-			tuple<uint32_t, string> node = this->eviction_queue_[i];
+			node_type node = this->eviction_queue_[i];
 			if(get<1>(node) == key) {
 				return get<0>(node);
 			}
