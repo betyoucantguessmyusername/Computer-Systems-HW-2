@@ -92,7 +92,7 @@ struct Cache::Impl {
 	std::unordered_map<std::string, void*, hash_func> hashtable_;
 
 
-	Impl(index_type maxmem, evictor_type evictor, hash_func hasher)
+	Impl(index_type maxmem, hash_func hasher)
 	: 
 	maxmem_(maxmem), Evictor_(EvictorType()), hasher_(hasher), memused_(0), hashtable_(0 , hasher_)
 
@@ -104,10 +104,10 @@ struct Cache::Impl {
 
     ~Impl() = default;
 
-	void set(key_type key, val_type val, index_type size) {
+	int set(key_type key, val_type val, index_type size) {
 		if(size>maxmem_) {
 			// don't bother
-			return;
+			return -1;
 		}
 		// if the key is already in the table...
 		if(hashtable_.find(key)!=hashtable_.end()) {
@@ -129,6 +129,7 @@ struct Cache::Impl {
 		memcpy(newval, val, size);
 		hashtable_[key] = newval;
 		Evictor_.add(size, key);
+		return 0;
 	}
 
 	// returns cache[key]
@@ -143,13 +144,15 @@ struct Cache::Impl {
 	}
 
 	// removes key:val from cache
-	void del(key_type key) {
+	int del(key_type key) {
 		if(hashtable_.find(key)!=hashtable_.end()) {
 			free(hashtable_[key]);
 			hashtable_.erase(key);
 			memused_ -= Evictor_.getsize(key);
 			Evictor_.remove(key);
+			return 0;
 		}
+		return -1;
 	}
 
 	// returns num of bytes used by cached values
@@ -159,9 +162,8 @@ struct Cache::Impl {
 };
 
 Cache::Cache(index_type maxmem,
-    evictor_type evictor,
     hash_func hasher)
-	: pImpl_(new Impl(maxmem, evictor, hasher)) {
+	: pImpl_(new Impl(maxmem, hasher)) {
 }
 
 Cache::~Cache() {
@@ -174,8 +176,8 @@ Cache::~Cache() {
 // Both the key and the value are to be deep-copied (not just pointer copied).
 // If maxmem capacity is exceeded, sufficient values will be removed
 // from the cache to accomodate the new value.
-void Cache::set(key_type key, val_type val, index_type size) {
-	pImpl_->set(key, val, size);
+int Cache::set(key_type key, val_type val, index_type size) {
+	return pImpl_->set(key, val, size);
 }
 
 // Retrieve a pointer to the value associated with key in the cache,
@@ -185,8 +187,8 @@ Cache::val_type Cache::get(key_type key, index_type& val_size) const {
 }
 
 // Delete an object from the cache, if it's still there
-void Cache::del(key_type key) {
-	pImpl_->del(key);
+int Cache::del(key_type key) {
+	return pImpl_->del(key);
 }
 
 // Compute the total amount of memory used up by all cache values (not keys)

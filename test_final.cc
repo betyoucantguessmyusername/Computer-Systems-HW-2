@@ -56,7 +56,7 @@ void test_set_insert() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 	uint32_t first_val = 1;
 	Cache::key_type key = "key";
 
@@ -74,7 +74,7 @@ void test_set_insert_full() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 	uint32_t val = 1;
 	myCache->set("key1", &val, size);
 	val = 2;
@@ -91,7 +91,7 @@ void test_set_overwrite() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 	uint32_t val = 1;
 	myCache->set("key", &val, size);
 	val = 2;
@@ -107,7 +107,7 @@ void test_set_overwrite_dif_size() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 	uint16_t small_value = 1;
 	myCache->set("key", &small_value, small_size);
 	uint32_t val = 2;
@@ -123,14 +123,14 @@ void test_evictor_fifo() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 	uint32_t val = 1;
 	myCache->set("key1", &val, size);
 	val = 2;
 	myCache->set("key2", &val, size);
 	val = 3;
 	myCache->set("key3", &val, size);
-	assert(get_interface(myCache, "key1", size) == -1 && "FIFO-eviction failed");
+	assert(get_interface(myCache, "key1", size) == (uint32_t)-1 && "FIFO-eviction failed");
 	free(myCache);
 }
 
@@ -140,7 +140,7 @@ void test_evictor_lru() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 	uint32_t val = 1;
 	myCache->set("key1", &val, size);
 	val = 2;
@@ -149,7 +149,7 @@ void test_evictor_lru() {
 	myCache->get("key1", size);
 	val = 4;
 	myCache->set("key3", &val, size);
-	assert(get_interface(myCache, "key2", size) == -1 && "LRU-eviction failed");
+	assert(get_interface(myCache, "key2", size) == (uint32_t)-1 && "LRU-eviction failed");
 	free(myCache);
 }
 
@@ -161,7 +161,7 @@ void test_get_absent() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 
 	Cache::key_type key = "key";
 	Cache::index_type val_size = sizeof(uint32_t);
@@ -176,7 +176,7 @@ void test_get_deleted() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 
 	uint32_t val = 42;
 	Cache::key_type key = "key";
@@ -195,7 +195,7 @@ void test_delete_absent() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 
 	Cache::key_type key = "key";
 	uint32_t val_size = sizeof(uint32_t);
@@ -212,7 +212,7 @@ void test_space_used() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 
 	Cache::index_type space_used = myCache->space_used();
 	assert(space_used == 0 && "Cache should initially be empty");
@@ -225,7 +225,7 @@ void test_space_used_insert() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 
 	uint32_t val = 42;
 	Cache::key_type key = "key";
@@ -242,7 +242,7 @@ void test_space_used_delete() {
 	uint32_t size = sizeof(uint32_t);
 	uint32_t bound = 2;
 	betterHasher myHasher = betterHasher(bound);
-	Cache* myCache = new Cache(cache_length*size, [](){ return 0; }, myHasher);
+	Cache* myCache = new Cache(cache_length*size, myHasher);
 
 	uint32_t val = 42;
 	Cache::key_type key = "key";
