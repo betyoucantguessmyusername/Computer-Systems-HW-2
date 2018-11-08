@@ -12,41 +12,57 @@
 
 using namespace std;
 
+// this is a functor
+class betterHasher {
+private:
+	hash<string> hasher_;
+	uint32_t bound_;
+
+public:
+	// hashes key to uint32_t in range(0, bound)
+	uint32_t operator()(string key) {
+		return this->hasher_(key)%this->bound_;
+	}
+	betterHasher(uint32_t bound);
+};
+
+betterHasher::betterHasher(uint32_t bound) {
+	this->bound_ = bound;
+}
+
 int 
 main(int argc, char **argv)
 {
 	//argc = argument count
 	//argv = array of arguments 
 
-	int mFlag = 0;
-	int tFlag = 0;
-	int index = 0;
-	int index;
-	int c;
+	Cache::index_type memSize = 100;
+	int portNum = 8080;
+	int opt;
 
-	//https://www.gnu.org/software/libc/manual/html_node/Example-of-Getopt.html
-	while ((c = getopt (argc,argv, "abc:")) != -1)
-		switch( c )
+	//https://linux.die.net/man/3/getopt
+	while ((opt = getopt (argc,argv, "mt:")) != -1)
+		switch( opt )
 			{
 			case 'm':
-				mFlag = 1;
+				memSize = atoi(optarg);
 				break;
 			case 't':
-				tFlag = 1;
+				portNum = atoi(optarg);
 				break;
+			default:
+				fprintf(stderr, "Usage: %s [-m maxmem] [-t portNum]\n", argv[0]);
+            	exit(EXIT_FAILURE);
 			}
 
-	opterr = 0;
-
-	// assert (argc == 2 && "You have to enter two arguments, maxmem and portnum");
-	// auto maxmem = argv[1];
-	// auto portnum = argv[2];
+	cout << memSize << " " << portNum << endl;
 
 	//Initializing cache variables
+	uint32_t bound = 100;
 	uint32_t size = sizeof(uint32_t);
 	betterHasher myHasher = betterHasher(bound);
 
-	Cache* c = new Cache(maxmem*size, myHasher);
-
+	Cache* c = new Cache(memSize*size, myHasher);
+	free(c);
 
 }
