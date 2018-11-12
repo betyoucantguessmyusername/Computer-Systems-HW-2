@@ -41,7 +41,7 @@ main(int argc, char **argv)
 	int opt;
 
 	//https://linux.die.net/man/3/getopt
-	while ((opt = getopt (argc,argv, "mt:")) != -1)
+	while ((opt = getopt (argc,argv, "m:t:")) != -1)
 		switch( opt )
 			{
 			case 'm':
