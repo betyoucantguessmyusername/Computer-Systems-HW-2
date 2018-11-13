@@ -1,3 +1,6 @@
 [submodule "pistache"]
 	path = pistache
 	url = https://github.com/oktal/pistache.git
+[submodule "rapidjson"]
+	path = rapidjson
+	url = https://github.com/Tencent/rapidjson.git

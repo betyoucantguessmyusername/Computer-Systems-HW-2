@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <pistache/http.h>
+#include <pistache/http_headers.h>
 #include <pistache/router.h>
 #include <pistache/endpoint.h>
 
@@ -80,33 +81,31 @@ private:
 		Routes::Get(router, "/get/memsize", Routes::bind(&StatsEndpoint::get, this));
 		Routes::Put(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
 		Routes::Delete(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
-		Routes::Head(router,"key/k", Routes::bind(&StatsEndpoint::header, this));
 		Routes::Post(router, "/shutdown", Routes::bind(&StatsEndpoint::destroy, this));
 	}
 
 	void get(const Rest::Request& request, Http::ResponseWriter response) {
-		Cache::index_type status;
-		json::value data;
+		Cache::val_type getStatus;
+		Cache::index_type memStatus;
+		string json = "{}";
 
 		if (request.hasParam(":key")){
 			auto key = request.param(":key").as<std::string>();
 			auto valsize_string = request.param(":valsize").as<std::string>();
 			uint32_t valsize = atoi(valsize_string.c_str());
 
-			status = cache_->get(key, valsize);
+			getStatus = cache_->get(key, valsize);
 			int* status_nonvoid = new int[1];
-			if(status!= nullptr) {
-				memcpy(status_nonvoid, status, valsize);
-			}
-			data[L"key"] = json::value::string(key);
-			data[L"value"] = json::value::number(status_nonvoid);
-
+			if(getStatus!= nullptr) {
+				memcpy(status_nonvoid, getStatus, valsize);
+				json = "{ key: " + key + ", value: " + std::to_string(*status_nonvoid)+" }";
+			} 
 		}
 		else if (request.hasParam("memsize")){
-			status = cache_->space_used();
-			data[L"memused"] = json::value::number(status);
+			memStatus = cache_->space_used();
+			json = "{ memused: "+ to_string(memStatus)+" }";
 		}	
-		response.send(Http::Code::Ok, std::to_string(*data));
+		response.send(Http::Code::Ok, json);
 	}
 
 	void set(const Rest::Request& request, Http::ResponseWriter response) {
@@ -116,19 +115,14 @@ private:
 		uint32_t size = atoi(size_string.c_str());
 
 		int status = cache_->set(key, &value, size);
-		response.send(Http::Code::Ok, std::to_string(status));
+		response.send(Http::Code::Ok, to_string(status));
 	}
 
 	void del(const Rest::Request& request, Http::ResponseWriter response) {
 		auto key = request.param(":key").as<std::string>();
 
 		int status = cache_->del(key);
-		response.send(Http::Code::Ok, std::to_string(status));
-	}
-
-	void header(const Rest::Request& request, Http:ResponseWriter response){
-
-		response.send(Http::Code::Ok, "HTTP version, Date, Accept and Accept and Content-Type with application/json");
+		response.send(Http::Code::Ok, to_string(status));
 	}
 
 	// Code for exiting
@@ -156,7 +150,7 @@ int main(int argc, char *argv[]) {
 				memSize = atoi(optarg);
 				break;
 			case 't':
-				port = std::stol(optarg);
+				port = stol(optarg);
 				break;
 			default:
 				fprintf(stderr, "Usage: %s [-m maxmem] [-t portNum]\n", argv[0]);
