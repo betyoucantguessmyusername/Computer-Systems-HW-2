@@ -60,7 +60,7 @@ public:
 
 	Cache* makeCache(uint32_t memSize = 2) {
 		//Initializing cache variables
-		uint32_t bound = 100;
+		uint32_t bound = memSize;
 		uint32_t size = sizeof(uint32_t);
 		betterHasher myHasher = betterHasher(bound);
 
