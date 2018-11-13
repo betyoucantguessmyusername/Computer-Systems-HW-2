@@ -35,15 +35,6 @@ betterHasher::betterHasher(uint32_t bound) {
 	this->bound_ = bound;
 }
 
-void printCookies(const Http::Request& req) {
-	auto cookies = req.cookies();
-	std::cout << "Cookies: [" << std::endl;
-	const std::string indent(4, ' ');
-	for (const auto& c: cookies) {
-		std::cout << indent << c.name << " = " << c.value << std::endl;
-	}
-	std::cout << "]" << std::endl;
-}
 
 namespace Generic {
 
@@ -104,9 +95,6 @@ private:
 		Routes::Get(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
 
 
-		Routes::Get(router, "/value/:name", Routes::bind(&StatsEndpoint::doGetMetric, this));
-		Routes::Get(router, "/ready", Routes::bind(&Generic::handleReady));
-		Routes::Get(router, "/auth", Routes::bind(&StatsEndpoint::doAuth, this));
 
 	}
 
@@ -143,59 +131,7 @@ private:
 
 	}
 
-	void doGetMetric(const Rest::Request& request, Http::ResponseWriter response) {
-		auto name = request.param(":name").as<std::string>();
 
-		Guard guard(metricsLock);
-		auto it = std::find_if(metrics.begin(), metrics.end(), [&](const Metric& metric) {
-			return metric.name() == name;
-		});
-
-		if (it == std::end(metrics)) {
-			response.send(Http::Code::Not_Found, "Metric does not exist");
-		} else {
-			const auto& metric = *it;
-			response.send(Http::Code::Ok, std::to_string(metric.value()));
-		}
-
-	}
-
-	void doAuth(const Rest::Request& request, Http::ResponseWriter response) {
-		printCookies(request);
-		response.cookies()
-			.add(Http::Cookie("lang", "en-US"));
-		response.send(Http::Code::Ok);
-	}
-
-	class Metric {
-	public:
-		Metric(std::string name, int initialValue = 1)
-			: name_(std::move(name))
-			, value_(initialValue)
-		{ }
-
-		int incr(int n = 1) {
-			int old = value_;
-			value_ += n;
-			return old;
-		}
-
-		int value() const {
-			return value_;
-		}
-
-		std::string name() const {
-			return name_;
-		}
-	private:
-		std::string name_;
-		int value_;
-	};
-
-	typedef std::mutex Lock;
-	typedef std::lock_guard<Lock> Guard;
-	Lock metricsLock;
-	std::vector<Metric> metrics;
 
 	std::shared_ptr<Http::Endpoint> httpEndpoint;
 	Rest::Router router;
