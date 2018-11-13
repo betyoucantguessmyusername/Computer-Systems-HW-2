@@ -36,13 +36,6 @@ betterHasher::betterHasher(uint32_t bound) {
 }
 
 
-namespace Generic {
-
-void handleReady(const Rest::Request&, Http::ResponseWriter response) {
-	response.send(Http::Code::Ok, "1");
-}
-
-}
 
 class StatsEndpoint {
 public:
