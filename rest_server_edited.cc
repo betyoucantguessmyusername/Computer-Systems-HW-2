@@ -83,7 +83,7 @@ private:
 	void setupRoutes() {
 		using namespace Rest;
 
-		Routes::Post(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
+		Routes::Put(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
 		Routes::Get(router, "/get/:key/:valsize", Routes::bind(&StatsEndpoint::get, this));
 		Routes::Get(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
 
