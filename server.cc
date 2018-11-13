@@ -1,16 +1,22 @@
-//Ezra Schwartz and Joe Meyer
+/* 
+   Mathieu Stefani, 07 février 2016
+   
+   Example of a REST endpoint with routing
 
-//#include <pistache>  
-//need specific file
-#include <pthread.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
+
+   Modified by Ezra Schwartz and Joe Meyer
+*/
+
+#include <algorithm>
 #include <unistd.h>
+#include <pistache/http.h>
+#include <pistache/router.h>
+#include <pistache/endpoint.h>
 
 #include "cache_lru.cc"
 
 using namespace std;
+using namespace Pistache;
 
 // this is a functor
 class betterHasher {
@@ -30,14 +36,115 @@ betterHasher::betterHasher(uint32_t bound) {
 	this->bound_ = bound;
 }
 
-int 
-main(int argc, char **argv)
-{
-	//argc = argument count
-	//argv = array of arguments 
+class StatsEndpoint {
+public:
+	StatsEndpoint(Address addr)
+		: httpEndpoint(std::make_shared<Http::Endpoint>(addr))
+	{ }
 
-	Cache::index_type memSize = 100;
+	Cache* cache_;
+
+	void init(size_t thr = 2, Cache::index_type memSize = 100) {
+		auto opts = Http::Endpoint::options()
+			.threads(thr)
+			.flags(Tcp::Options::InstallSignalHandler);
+		httpEndpoint->init(opts);
+		setupRoutes();
+
+		cache_ = makeCache(memSize);
+	}
+
+	Cache* makeCache(uint32_t memSize = 2) {
+		//Initializing cache variables
+		uint32_t bound = memSize;
+		uint32_t size = sizeof(uint32_t);
+		betterHasher myHasher = betterHasher(bound);
+
+		return new Cache(memSize*size, myHasher);
+	}
+
+	void start() {
+		httpEndpoint->setHandler(router.handler());
+		httpEndpoint->serve();
+	}
+
+	void shutdown() {
+		httpEndpoint->shutdown();
+	}
+
+private:
+	void setupRoutes() {
+		using namespace Rest;
+
+		Routes::Get(router, "/get/:key/:valsize", Routes::bind(&StatsEndpoint::get, this));
+		Routes::Get(router, "/get/memsize", Routes::bind(&StatsEndpoint::get, this));
+		Routes::Put(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
+		Routes::Delete(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
+		Routes::Head(router,"key/k", Routes::bind(&StatsEndpoint::header, this));
+		Routes::Post(router, "/shutdown", Routes::bind(&StatsEndpoint::destroy, this));
+	}
+
+	void get(const Rest::Request& request, Http::ResponseWriter response) {
+		Cache::index_type status;
+		json::value data;
+
+		if (request.hasParam(":key")){
+			auto key = request.param(":key").as<std::string>();
+			auto valsize_string = request.param(":valsize").as<std::string>();
+			uint32_t valsize = atoi(valsize_string.c_str());
+
+			status = cache_->get(key, valsize);
+			int* status_nonvoid = new int[1];
+			if(status!= nullptr) {
+				memcpy(status_nonvoid, status, valsize);
+			}
+			data[L"key"] = json::value::string(key);
+			data[L"value"] = json::value::number(status_nonvoid);
+
+		}
+		else if (request.hasParam("memsize")){
+			status = cache_->space_used();
+			data[L"memused"] = json::value::number(status);
+		}	
+		response.send(Http::Code::Ok, std::to_string(*data));
+	}
+
+	void set(const Rest::Request& request, Http::ResponseWriter response) {
+		auto key = request.param(":key").as<std::string>();
+		auto value = request.param(":value").as<std::string>();
+		auto size_string = request.param(":size").as<std::string>();
+		uint32_t size = atoi(size_string.c_str());
+
+		int status = cache_->set(key, &value, size);
+		response.send(Http::Code::Ok, std::to_string(status));
+	}
+
+	void del(const Rest::Request& request, Http::ResponseWriter response) {
+		auto key = request.param(":key").as<std::string>();
+
+		int status = cache_->del(key);
+		response.send(Http::Code::Ok, std::to_string(status));
+	}
+
+	void header(const Rest::Request& request, Http:ResponseWriter response){
+
+		response.send(Http::Code::Ok, "HTTP version, Date, Accept and Accept and Content-Type with application/json");
+	}
+
+	// Code for exiting
+	void destroy(const Rest::Request& request, Http::ResponseWriter response) {
+		free(cache_);
+		response.send(Http::Code::Ok, "0");
+	}
+
+	std::shared_ptr<Http::Endpoint> httpEndpoint;
+	Rest::Router router;
+};
+
+int main(int argc, char *argv[]) {
 	Port port(8080);
+	int thr = 2;
+	Cache::index_type memSize = 100;
 
 	int opt;
 
@@ -49,30 +156,21 @@ main(int argc, char **argv)
 				memSize = atoi(optarg);
 				break;
 			case 't':
-				portNum = atoi(optarg);
+				port = std::stol(optarg);
 				break;
 			default:
 				fprintf(stderr, "Usage: %s [-m maxmem] [-t portNum]\n", argv[0]);
             	exit(EXIT_FAILURE);
 			}
 
-	cout << memSize << " " << portNum << endl;
-
-	//Initializing cache variables
-	uint32_t bound = 100;
-	uint32_t size = sizeof(uint32_t);
-	betterHasher myHasher = betterHasher(bound);
-
-	Cache* c = new Cache(memSize*size, myHasher);
-
 	Address addr(Ipv4::any(), port);
+
+	cout << "Server up and running..." << endl;
+
 	StatsEndpoint stats(addr);
 
-    stats.init(thr);
-    stats.start();
+	stats.init(thr, memSize);
+	stats.start();
 
-    stats.shutdown();
-
-	free(c);
-
+	stats.shutdown();
 }
