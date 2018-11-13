@@ -37,7 +37,8 @@ main(int argc, char **argv)
 	//argv = array of arguments 
 
 	Cache::index_type memSize = 100;
-	int portNum = 8080;
+	Port port(8080);
+
 	int opt;
 
 	//https://linux.die.net/man/3/getopt
@@ -63,6 +64,15 @@ main(int argc, char **argv)
 	betterHasher myHasher = betterHasher(bound);
 
 	Cache* c = new Cache(memSize*size, myHasher);
+
+	Address addr(Ipv4::any(), port);
+	StatsEndpoint stats(addr);
+
+    stats.init(thr);
+    stats.start();
+
+    stats.shutdown();
+
 	free(c);
 
 }

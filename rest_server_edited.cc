@@ -8,10 +8,11 @@
 */
 
 #include <algorithm>
-
+#include <unistd.h>
 #include <pistache/http.h>
 #include <pistache/router.h>
 #include <pistache/endpoint.h>
+
 #include "cache_lru.cc"
 
 using namespace std;
@@ -35,8 +36,6 @@ betterHasher::betterHasher(uint32_t bound) {
 	this->bound_ = bound;
 }
 
-
-
 class StatsEndpoint {
 public:
 	StatsEndpoint(Address addr)
@@ -45,17 +44,14 @@ public:
 
 	Cache* cache_;
 
-	void init(size_t thr = 2) {
+	void init(size_t thr = 2, Cache::index_type memSize = 100) {
 		auto opts = Http::Endpoint::options()
 			.threads(thr)
 			.flags(Tcp::Options::InstallSignalHandler);
 		httpEndpoint->init(opts);
 		setupRoutes();
 
-		cache_ = makeCache();
-
-
-
+		cache_ = makeCache(memSize);
 	}
 
 	Cache* makeCache(uint32_t memSize = 2) {
@@ -66,9 +62,6 @@ public:
 
 		return new Cache(memSize*size, myHasher);
 	}
-
-
-
 
 	void start() {
 		httpEndpoint->setHandler(router.handler());
@@ -83,19 +76,37 @@ private:
 	void setupRoutes() {
 		using namespace Rest;
 
-		Routes::Post(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
 		Routes::Get(router, "/get/:key/:valsize", Routes::bind(&StatsEndpoint::get, this));
-		Routes::Get(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
-		Routes::Get(router, "/exit", Routes::bind(&StatsEndpoint::destroy, this));
-
-
-
+		Routes::Get(router, "/get/memsize", Routes::bind(&StatsEndpoint::get, this));
+		Routes::Put(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
+		Routes::Delete(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
+		Routes::Head(router,"key/k", Routes::bind(&StatsEndpoint::header, this));
+		Routes::Post(router, "/shutdown", Routes::bind(&StatsEndpoint::destroy, this));
 	}
 
-	// Code for exiting
-	void destroy(const Rest::Request& request, Http::ResponseWriter response) {
-		free(cache_);
-		response.send(Http::Code::Ok, "0");
+	void get(const Rest::Request& request, Http::ResponseWriter response) {
+		Cache::index_type status;
+		json::value data;
+
+		if (request.hasParam(":key")){
+			auto key = request.param(":key").as<std::string>();
+			auto valsize_string = request.param(":valsize").as<std::string>();
+			uint32_t valsize = atoi(valsize_string.c_str());
+
+			status = cache_->get(key, valsize);
+			int* status_nonvoid = new int[1];
+			if(status!= nullptr) {
+				memcpy(status_nonvoid, status, valsize);
+			}
+			data[L"key"] = json::value::string(key);
+			data[L"value"] = json::value::number(status_nonvoid);
+
+		}
+		else if (request.hasParam("memsize")){
+			status = cache_->space_used();
+			data[L"memused"] = json::value::number(status);
+		}	
+		response.send(Http::Code::Ok, std::to_string(*data));
 	}
 
 	void set(const Rest::Request& request, Http::ResponseWriter response) {
@@ -106,21 +117,6 @@ private:
 
 		int status = cache_->set(key, &value, size);
 		response.send(Http::Code::Ok, std::to_string(status));
-
-	}
-
-	void get(const Rest::Request& request, Http::ResponseWriter response) {
-		auto key = request.param(":key").as<std::string>();
-		auto valsize_string = request.param(":valsize").as<std::string>();
-		uint32_t valsize = atoi(valsize_string.c_str());
-
-		Cache::val_type status = cache_->get(key, valsize);
-		int* status_nonvoid = new int[1];
-		if(status!= nullptr) {
-			memcpy(status_nonvoid, status, valsize);
-		}
-		response.send(Http::Code::Ok, std::to_string(*status_nonvoid));
-
 	}
 
 	void del(const Rest::Request& request, Http::ResponseWriter response) {
@@ -128,35 +124,52 @@ private:
 
 		int status = cache_->del(key);
 		response.send(Http::Code::Ok, std::to_string(status));
-
 	}
 
+	void header(const Rest::Request& request, Http:ResponseWriter response){
 
+		response.send(Http::Code::Ok, "HTTP version, Date, Accept and Accept and Content-Type with application/json");
+	}
+
+	// Code for exiting
+	void destroy(const Rest::Request& request, Http::ResponseWriter response) {
+		free(cache_);
+		response.send(Http::Code::Ok, "0");
+	}
 
 	std::shared_ptr<Http::Endpoint> httpEndpoint;
 	Rest::Router router;
 };
 
 int main(int argc, char *argv[]) {
-	Port port(9080);
-
+	Port port(8080);
 	int thr = 2;
+	Cache::index_type memSize = 100;
 
-	if (argc >= 2) {
-		port = std::stol(argv[1]);
+	int opt;
 
-		if (argc == 3)
-			thr = std::stol(argv[2]);
-	}
+	//https://linux.die.net/man/3/getopt
+	while ((opt = getopt (argc,argv, "m:t:")) != -1)
+		switch( opt )
+			{
+			case 'm':
+				memSize = atoi(optarg);
+				break;
+			case 't':
+				port = std::stol(optarg);
+				break;
+			default:
+				fprintf(stderr, "Usage: %s [-m maxmem] [-t portNum]\n", argv[0]);
+            	exit(EXIT_FAILURE);
+			}
 
 	Address addr(Ipv4::any(), port);
 
-	cout << "Cores = " << hardware_concurrency() << endl;
-	cout << "Using " << thr << " threads" << endl;
+	cout << "Server up and running..." << endl;
 
 	StatsEndpoint stats(addr);
 
-	stats.init(thr);
+	stats.init(thr, memSize);
 	stats.start();
 
 	stats.shutdown();
