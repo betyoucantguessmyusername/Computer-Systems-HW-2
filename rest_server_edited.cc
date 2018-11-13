@@ -83,12 +83,19 @@ private:
 	void setupRoutes() {
 		using namespace Rest;
 
-		Routes::Put(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
+		Routes::Post(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
 		Routes::Get(router, "/get/:key/:valsize", Routes::bind(&StatsEndpoint::get, this));
 		Routes::Get(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
+		Routes::Get(router, "/exit", Routes::bind(&StatsEndpoint::destroy, this));
 
 
 
+	}
+
+	// Code for exiting
+	void destroy(const Rest::Request& request, Http::ResponseWriter response) {
+		free(cache_);
+		response.send(Http::Code::Ok, "0");
 	}
 
 	void set(const Rest::Request& request, Http::ResponseWriter response) {
