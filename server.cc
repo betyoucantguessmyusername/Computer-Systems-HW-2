@@ -14,7 +14,7 @@
 #include <pistache/router.h>
 #include <pistache/endpoint.h>
 
-#include "cache_lru.cc"
+#include "cache.hh"
 
 using namespace std;
 using namespace Pistache;
@@ -130,9 +130,12 @@ private:
 
 	// Code for exiting
 	void destroy(const Rest::Request& request, Http::ResponseWriter response) {
+		cout << "got here" << endl;
 		free(cache_);
-		shutdown();
 		response.send(Http::Code::Ok, "0");
+		sleep(3);
+		cout << "got here again" << endl;
+		shutdown();
 	}
 
 	std::shared_ptr<Http::Endpoint> httpEndpoint;

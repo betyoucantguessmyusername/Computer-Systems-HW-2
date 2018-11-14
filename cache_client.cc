@@ -99,65 +99,84 @@ struct Cache::Impl {
 	{
 		assert(maxmem_>0 && "Cache size must be positive");
 		hashtable_.max_load_factor(0.5);
+
+		Http::Client client_;
+
+		int thread = 1;
+
+	    auto opts = Http::Client::options()
+	        .threads(thread)
+	        .maxConnectionsPerHost(8);
+	    client_.init(opts);
     }
 
 
     ~Impl() = default;
 
 	int set(key_type key, val_type val, index_type size) {
-		if(size>maxmem_) {
-			// don't bother
-			return -1;
-		}
-		// if the key is already in the table...
-		if(hashtable_.find(key)!=hashtable_.end()) {
-			// remove it from queue (will overwrite it in cache/re-add it to queue later)
-			free(hashtable_[key]);
-			memused_ -= Evictor_.getsize(key);
-			Evictor_.remove(key);
-		}
-		memused_ += size;
-		while(memused_ >= maxmem_) {
-			// get next_evict (also del.s it from ev. q.)
-			node_type next_evict = Evictor_();
-			string next_evict_key = get_tuple_key(next_evict);
-			uint32_t next_evict_size = get_tuple_size(next_evict);
-			memused_ -= next_evict_size;
-			hashtable_.erase(next_evict_key);
-		}
-		void* newval = new char[size];
-		memcpy(newval, val, size);
-		hashtable_[key] = newval;
-		Evictor_.add(size, key);
-		return 0;
+
+		string request = '/'+key+'/'+to_string(val)+'/'+to_string(size);
+
+		auto response = client.put(request).send();
+
+		resp.then([&](Http::Response response) {
+        std::cout << "Response code = " << response.code() << std::endl;
+        auto body = response.body();
+        if (!body.empty())
+           std::cout << "Response body = " << body << std::endl;
+    	}, Async::IgnoreException);
+
+		return body;
 	}
 
 	// returns cache[key]
 	val_type get(key_type key, index_type& val_size) const {
-		if(hashtable_.find(key)!=hashtable_.end()) {
-			Evictor_.remove(key);
-			Evictor_.add(val_size, key);
-			return hashtable_.find(key)->second;
-		} else {
-			return nullptr;
-		}
+
+		string request = '/'+key+'/'+to_string(val_size);
+
+		auto response = client.get(request).send();
+
+		resp.then([&](Http::Response response) {
+        std::cout << "Response code = " << response.code() << std::endl;
+        auto body = response.body();
+        if (!body.empty())
+           std::cout << "Response body = " << body << std::endl;
+    	}, Async::IgnoreException);
+
+		return body;
 	}
 
 	// removes key:val from cache
 	int del(key_type key) {
-		if(hashtable_.find(key)!=hashtable_.end()) {
-			free(hashtable_[key]);
-			hashtable_.erase(key);
-			memused_ -= Evictor_.getsize(key);
-			Evictor_.remove(key);
-			return 0;
-		}
-		return -1;
+
+		string request = '/'+key;
+
+		auto response = client.delete(request).send();
+
+		resp.then([&](Http::Response response) {
+        std::cout << "Response code = " << response.code() << std::endl;
+        auto body = response.body();
+        if (!body.empty())
+           std::cout << "Response body = " << body << std::endl;
+    	}, Async::IgnoreException);
+
+		return body;
 	}
 
 	// returns num of bytes used by cached values
 	index_type space_used() const {
-		return memused_;
+		string request = '/memsize';
+
+		auto response = client.get(request).send();
+
+		resp.then([&](Http::Response response) {
+        std::cout << "Response code = " << response.code() << std::endl;
+        auto body = response.body();
+        if (!body.empty())
+           std::cout << "Response body = " << body << std::endl;
+    	}, Async::IgnoreException);
+
+		return body;
 	}
 };
 
