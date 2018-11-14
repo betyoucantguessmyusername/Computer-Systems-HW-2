@@ -20,6 +20,21 @@ void create_cache(Address server_name, Port port, Cache::index_type memSize) {
 	stats.shutdown();
 }
 
+Cache::index_type space_used_test(port) {
+	Cache::index_type memused = PUT localhost:port/"memused";
+	return memused;
+}
+
+
+// sets Cache[key] = val
+void set_test(Cache* c, Cache::key_type key, int* val, Cache::index_type size, port) {
+	cout << "setting Cache['" << key << "'] = " << *val << "\n";
+	SET 
+}
+
+
+
+
 int main(int argc, char *argv[]) {
 	Port port(8080);
 	int thr = 2;
@@ -55,12 +70,6 @@ int main(int argc, char *argv[]) {
 
 
 
-
-Cache::index_type space_used_test(Cache* c) {
-	Cache::index_type used_space = c->space_used();
-	cout << "space used: " << used_space << "\n";
-	PUT localhost
-}
 
 // sets Cache[key] = val
 void set_test(Cache* c, Cache::key_type key, int* val, Cache::index_type size, port) {
