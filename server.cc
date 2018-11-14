@@ -135,36 +135,4 @@ private:
 	Rest::Router router;
 };
 
-int main(int argc, char *argv[]) {
-	Port port(8080);
-	int thr = 2;
-	Cache::index_type memSize = 100;
 
-	int opt;
-
-	//https://linux.die.net/man/3/getopt
-	while ((opt = getopt (argc,argv, "m:t:")) != -1)
-		switch( opt )
-			{
-			case 'm':
-				memSize = atoi(optarg);
-				break;
-			case 't':
-				port = stol(optarg);
-				break;
-			default:
-				fprintf(stderr, "Usage: %s [-m maxmem] [-t portNum]\n", argv[0]);
-            	exit(EXIT_FAILURE);
-			}
-
-	Address addr(Ipv4::any(), port);
-
-	cout << "Server up and running..." << endl;
-
-	StatsEndpoint stats(addr);
-
-	stats.init(thr, memSize);
-	stats.start();
-
-	stats.shutdown();
-}
