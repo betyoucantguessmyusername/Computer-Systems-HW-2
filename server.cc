@@ -99,7 +99,7 @@ private:
 			memcpy(status_nonvoid, getStatus, valsize);
 			json = "{ key: " + key + ", value: " + std::to_string(*status_nonvoid)+" }";
 		} 
-		
+		cout << key << valsize <<endl;
 		response.send(Http::Code::Ok, json);
 	}
 	void getMemsize(const Rest::Request& request, Http::ResponseWriter response) {
@@ -156,6 +156,8 @@ int main(int argc, char *argv[]) {
 
     stats.init(thread, memSize);
     stats.start();
+
+    exit(EXIT_SUCCESS);
 }
 
 

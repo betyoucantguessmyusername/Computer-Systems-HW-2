@@ -1,121 +1,90 @@
-// Joe Meyer and Ezra Schwaartz
+/* 
+   Mathieu Stefani, 07 février 2016
+   
+ * Http client example
+*/
 
+#include <atomic>
+
+#include <pistache/net.h>
+#include <pistache/http.h>
+#include <pistache/client.h>
+#include <cache_lru.cc>
 #include "server.cc"
 
 using namespace Pistache;
 using namespace Pistache::Http;
 using namespace std;
 using namespace server;
+using namespace cache_lru
 
 
-void create_cache(Address server_name, Port port, Cache::index_type memSize) {
+void create_cache(Address server_name, Port port, int thread, Cache::index_type memSize) {
 
-	StatsEndpoint stats(addr);
+    StatsEndpoint stats(addr);
 
-	cout << "Server up and running..." << endl;
+    cout << "Server up and running..." << endl;
 
-	stats.init(thread, memSize);
-	stats.start();
+    stats.init(thread, memSize);
+    stats.start();
 
-	stats.shutdown();
 }
 
-Cache::index_type space_used_test(port) {
-	Cache::index_type memused = PUT localhost:port/"memused";
-	return memused;
+void get(string request) {
+    auto resp = client.get(request).cookie(Http::Cookie("FOO", "bar")).send();
+    resp.then([&](Http::Response response) {
+        std::cout << "Response code = " << response.code() << std::endl;
+        auto body = response.body();
+        if (!body.empty())
+           std::cout << "Response body = " << body << std::endl;
+    }, Async::IgnoreException);
+    responses.push_back(std::move(resp));
+
+
 }
 
-
-// sets Cache[key] = val
-void set_test(Cache* c, Cache::key_type key, int* val, Cache::index_type size, port) {
-	cout << "setting Cache['" << key << "'] = " << *val << "\n";
-	SET 
+void destroy() {
+    client.shutdown();
 }
-
-
 
 
 int main(int argc, char *argv[]) {
-	Port port(8080);
-	int thr = 2;
-	Cache::index_type memSize = 100;
 
-	int opt;
+  
 
-	//https://linux.die.net/man/3/getopt
-	while ((opt = getopt (argc,argv, "m:t:")) != -1)
-		switch( opt )
-			{
-			case 'm':
-				memSize = atoi(optarg);
-				break;
-			case 't':
-				port = stol(optarg);
-				break;
-			default:
-				fprintf(stderr, "Usage: %s [-m maxmem] [-t portNum]\n", argv[0]);
-            	exit(EXIT_FAILURE);
-			}
 
-	Address addr(Ipv4::any(), port);
 
-	create_cache(addr, port, memSize);
+    if (argc != 2) {
+        std::cerr << "Usage: http_client memSize port [threads]" << std::endl;
+        return 1;
+    }
+
+    Cache::index_type memSize =  stoi(argv[1]);
+    Port port = stoi(argv[2]);
+
+    global vector<Async::Promise<Http::Response>> responses;
+    global int thread = 1;
+
+    if (argc==3) {
+        thread = stoi(arv[3]);
+    }
+
+    //Question: What is server name?
+
+
+    Http::Client client;
+
+    auto opts = Http::Client::options()
+        .threads(thread)
+        .maxConnectionsPerHost(8);
+    client.init(opts);
+
+
+    Address addr(Ipv4::any(), port);
+
+    create_cache(addr, port, memSize);
+
+
+
 
 }
-
-
-
-
-
-
-
-
-
-// sets Cache[key] = val
-void set_test(Cache* c, Cache::key_type key, int* val, Cache::index_type size, port) {
-	cout << "setting Cache['" << key << "'] = " << *val << "\n";
-	server
-}
-
-
-// prints value at key
-void get_test(Cache* c, Cache::key_type key, Cache::index_type& val_size) {
-	cout << "getting Cache['" << key << "']: ";
-	Cache::val_type value = c->get(key, val_size);
-	int* data_at_val = new int[1];
-	if(value!=nullptr) {
-		memcpy(data_at_val, value, val_size);
-		cout << *data_at_val << '\n';
-	}
-	free(data_at_val);
-}
-
-// deletes Cache[key]
-void del_test(Cache* c, Cache::key_type key) {
-	cout << "deleting Cache['" << key << "']\n";
-	c->del(key);
-}
-
-
-// this is a functor
-class betterHasher {
-private:
-	hash<string> hasher_;
-	int bound_;
-
-public:
-	// hashes key to int in range(0, bound)
-	uint32_t operator()(string key) {
-		return this->hasher_(key)%this->bound_;
-	}
-	betterHasher(int bound);
-};
-
-betterHasher::betterHasher(int bound) {
-	this->bound_ = bound;
-}
-
-
-
-
-
