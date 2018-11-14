@@ -186,7 +186,7 @@ Cache::Cache(index_type maxmem,
 }
 
 Cache::~Cache() {
-
+	client_.post("/shutdown").send();
 }
 
 
