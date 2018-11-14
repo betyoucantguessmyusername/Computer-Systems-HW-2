@@ -78,37 +78,39 @@ private:
 	void setupRoutes() {
 		using namespace Rest;
 
-		Routes::Get(router, "/get/:key/:valsize", Routes::bind(&StatsEndpoint::get, this));
-		Routes::Get(router, "/get/memsize", Routes::bind(&StatsEndpoint::get, this));
-		Routes::Put(router, "/set/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
-		Routes::Delete(router, "/del/:key", Routes::bind(&StatsEndpoint::del, this));
+		Routes::Get(router, "/:key/:valsize", Routes::bind(&StatsEndpoint::getValue, this));
+		Routes::Get(router, "/memsize", Routes::bind(&StatsEndpoint::getMemsize, this));
+		Routes::Put(router, "/:key/:value/:size", Routes::bind(&StatsEndpoint::set, this));
+		Routes::Delete(router, "/:key", Routes::bind(&StatsEndpoint::del, this));
 		Routes::Post(router, "/shutdown", Routes::bind(&StatsEndpoint::destroy, this));
 	}
 
-	void get(const Rest::Request& request, Http::ResponseWriter response) {
+	void getValue(const Rest::Request& request, Http::ResponseWriter response) {
 		Cache::val_type getStatus;
-		Cache::index_type memStatus;
-		string json = "{}";
+		string json = "{error}";
 
-		if (request.hasParam(":key")){
-			auto key = request.param(":key").as<std::string>();
-			auto valsize_string = request.param(":valsize").as<std::string>();
-			uint32_t valsize = atoi(valsize_string.c_str());
+		auto key = request.param(":key").as<std::string>();
+		auto valsize_string = request.param(":valsize").as<std::string>();
+		uint32_t valsize = atoi(valsize_string.c_str());
 
-			getStatus = cache_->get(key, valsize);
-			int* status_nonvoid = new int[1];
-			if(getStatus!= nullptr) {
-				memcpy(status_nonvoid, getStatus, valsize);
-				json = "{ key: " + key + ", value: " + std::to_string(*status_nonvoid)+" }";
-			} 
-		}
-		else if (request.hasParam("memsize")){
-			memStatus = cache_->space_used();
-			json = "{ memused: "+ to_string(memStatus)+" }";
-		}	
+		getStatus = cache_->get(key, valsize);
+		int* status_nonvoid = new int[1];
+		if(getStatus!= nullptr) {
+			memcpy(status_nonvoid, getStatus, valsize);
+			json = "{ key: " + key + ", value: " + std::to_string(*status_nonvoid)+" }";
+		} 
+		
 		response.send(Http::Code::Ok, json);
 	}
+	void getMemsize(const Rest::Request& request, Http::ResponseWriter response) {
+		Cache::index_type memStatus;
+		string json = "{error}";
 
+		memStatus = cache_->space_used();
+		json = "{ memused: "+ to_string(memStatus)+" }";
+
+		response.send(Http::Code::Ok, json);
+	}
 	void set(const Rest::Request& request, Http::ResponseWriter response) {
 		auto key = request.param(":key").as<std::string>();
 		auto value = request.param(":value").as<std::string>();
@@ -129,6 +131,7 @@ private:
 	// Code for exiting
 	void destroy(const Rest::Request& request, Http::ResponseWriter response) {
 		free(cache_);
+		shutdown();
 		response.send(Http::Code::Ok, "0");
 	}
 
@@ -138,8 +141,8 @@ private:
 
 int main(int argc, char *argv[]) {
 
-	if (argc != 2) {
-        std::cerr << "Usage: http_client memSize port [threads]" << std::endl;
+	if (argc != 3) {
+        std::cerr << argc << "Usage: http_client memSize port " << std::endl;
         return 1;
     }
 
