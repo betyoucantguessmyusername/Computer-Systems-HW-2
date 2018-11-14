@@ -18,6 +18,7 @@
 
 using namespace std;
 using namespace Pistache;
+using namespace Pistache::Http;
 
 // this is a functor
 class betterHasher {
@@ -101,7 +102,7 @@ private:
 				json = "{ key: " + key + ", value: " + std::to_string(*status_nonvoid)+" }";
 			} 
 		}
-		else (request.hasParam("memsize")){
+		else if (request.hasParam("memsize")){
 			memStatus = cache_->space_used();
 			json = "{ memused: "+ to_string(memStatus)+" }";
 		}	
@@ -134,5 +135,24 @@ private:
 	std::shared_ptr<Http::Endpoint> httpEndpoint;
 	Rest::Router router;
 };
+
+int main(int argc, char *argv[]) {
+
+	if (argc != 2) {
+        std::cerr << "Usage: http_client memSize port [threads]" << std::endl;
+        return 1;
+    }
+
+    Cache::index_type memSize = stoi(argv[1]);
+    Port port = stoi(argv[2]);
+    int thread = 1;
+    Address addr(Ipv4::any(), port);
+	StatsEndpoint stats(addr);
+
+    cout << "Server up and running..." << endl;
+
+    stats.init(thread, memSize);
+    stats.start();
+}
 
 
