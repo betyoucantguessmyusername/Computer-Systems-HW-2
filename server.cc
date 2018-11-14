@@ -101,7 +101,7 @@ private:
 				json = "{ key: " + key + ", value: " + std::to_string(*status_nonvoid)+" }";
 			} 
 		}
-		else if (request.hasParam("memsize")){
+		else (request.hasParam("memsize")){
 			memStatus = cache_->space_used();
 			json = "{ memused: "+ to_string(memStatus)+" }";
 		}	
