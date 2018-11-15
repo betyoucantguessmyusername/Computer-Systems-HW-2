@@ -46,6 +46,10 @@ public:
 
 };
 
+void Client::Client() {
+	cache_();
+}
+
 
 
 int main(int argc, char* argv[])
