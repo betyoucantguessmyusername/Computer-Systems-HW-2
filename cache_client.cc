@@ -96,7 +96,7 @@ struct Cache::Impl {
 	
 	std::unordered_map<std::string, void*, hash_func> hashtable_;
 
-	Http::Client client_;
+	mutable Http::Client client_;
 
 
 	Impl(index_type maxmem, hash_func hasher)
@@ -171,7 +171,7 @@ struct Cache::Impl {
 
 		string request = '/'+key;
 
-		auto resp = client_.delete(request).send();
+		auto resp = client_.Pistache::Http::Method::Delete(request).send();
 
 		int* status;
 
@@ -218,7 +218,7 @@ Cache::Cache(index_type maxmem,
 }
 
 Cache::~Cache() {
-	client_.post("/shutdown").send();
+	// client_.post("/shutdown").send();
 }
 
 
