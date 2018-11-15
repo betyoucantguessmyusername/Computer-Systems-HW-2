@@ -8,8 +8,13 @@
 #include <iostream>
 #include <algorithm>
 #include <assert.h>
+#include <pistache/net.h>
+#include <pistache/http.h>
+#include <pistache/client.h>
 
 using namespace std;
+using namespace Pistache;
+using namespace Pistache::Http;
 using node_type = tuple<uint32_t,string>;
 
 // this is a functor (implements Largest-out-first, to maximize number of values stored)
@@ -91,6 +96,8 @@ struct Cache::Impl {
 	
 	std::unordered_map<std::string, void*, hash_func> hashtable_;
 
+	Http::Client client_;
+
 
 	Impl(index_type maxmem, hash_func hasher)
 	: 
@@ -100,7 +107,6 @@ struct Cache::Impl {
 		assert(maxmem_>0 && "Cache size must be positive");
 		hashtable_.max_load_factor(0.5);
 
-		Http::Client client_;
 
 		int thread = 1;
 
@@ -115,18 +121,31 @@ struct Cache::Impl {
 
 	int set(key_type key, val_type val, index_type size) {
 
-		string request = '/'+key+'/'+to_string(val)+'/'+to_string(size);
+		// make uint32* storing void* data
+		uint32_t* val_ptr = new uint32_t[size];
+		memcpy(val_ptr, val, size);
+		// de-reference it
+		uint32_t value = *val_ptr;
 
-		auto response = client.put(request).send();
+		string request = '/'+key+'/'+to_string(value)+'/'+to_string(size);
+		free(val_ptr);
+
+		auto resp = client_.put(request).send();
+
+		int* status;
+
+
 
 		resp.then([&](Http::Response response) {
-        std::cout << "Response code = " << response.code() << std::endl;
         auto body = response.body();
-        if (!body.empty())
-           std::cout << "Response body = " << body << std::endl;
-    	}, Async::IgnoreException);
+        int body_int = stoi(body);
+        status = &body_int;
+        }, Async::IgnoreException);
 
-		return body;
+		int dereferenced_status = *status;
+		free(status);
+
+		return dereferenced_status;
 	}
 
 	// returns cache[key]
@@ -134,16 +153,17 @@ struct Cache::Impl {
 
 		string request = '/'+key+'/'+to_string(val_size);
 
-		auto response = client.get(request).send();
+		auto resp = client_.get(request).send();
+
+		void* value;
 
 		resp.then([&](Http::Response response) {
         std::cout << "Response code = " << response.code() << std::endl;
         auto body = response.body();
-        if (!body.empty())
-           std::cout << "Response body = " << body << std::endl;
-    	}, Async::IgnoreException);
+        value = &body;
+    }, Async::IgnoreException);
 
-		return body;
+		return value;
 	}
 
 	// removes key:val from cache
@@ -151,32 +171,44 @@ struct Cache::Impl {
 
 		string request = '/'+key;
 
-		auto response = client.delete(request).send();
+		auto resp = client_.delete(request).send();
+
+		int* status;
+
+
 
 		resp.then([&](Http::Response response) {
-        std::cout << "Response code = " << response.code() << std::endl;
         auto body = response.body();
-        if (!body.empty())
-           std::cout << "Response body = " << body << std::endl;
-    	}, Async::IgnoreException);
+        int body_int = stoi(body);
+        status = &body_int;
+        }, Async::IgnoreException);
 
-		return body;
+		int dereferenced_status = *status;
+		free(status);
+
+		return dereferenced_status;
 	}
 
 	// returns num of bytes used by cached values
 	index_type space_used() const {
-		string request = '/memsize';
+		string request = "/memsize";
 
-		auto response = client.get(request).send();
+		auto resp = client_.get(request).send();
+
+		index_type* status;
+
+
 
 		resp.then([&](Http::Response response) {
-        std::cout << "Response code = " << response.code() << std::endl;
         auto body = response.body();
-        if (!body.empty())
-           std::cout << "Response body = " << body << std::endl;
-    	}, Async::IgnoreException);
+        index_type body_int = stoi(body);
+        status = &body_int;
+        }, Async::IgnoreException);
 
-		return body;
+		index_type dereferenced_status = *status;
+		free(status);
+
+		return dereferenced_status;
 	}
 };
 
