@@ -86,18 +86,13 @@ uint32_t get_tuple_size(node_type node) {
 
 
 struct Cache::Impl {
-
-
-
 	index_type maxmem_;
 	hash_func hasher_;
 	index_type memused_;
 	mutable EvictorType Evictor_;
+	mutable Http::Client client_;
 	
 	std::unordered_map<std::string, void*, hash_func> hashtable_;
-
-	mutable Http::Client client_;
-
 
 	Impl(index_type maxmem, hash_func hasher)
 	: 
@@ -134,13 +129,11 @@ struct Cache::Impl {
 
 		int* status;
 
-
-
 		resp.then([&](Http::Response response) {
-        auto body = response.body();
-        int body_int = stoi(body);
-        status = &body_int;
-        }, Async::IgnoreException);
+	        auto body = response.body();
+	        int body_int = stoi(body);
+	        status = &body_int;
+	        }, Async::IgnoreException);
 
 		int dereferenced_status = *status;
 		free(status);
@@ -158,11 +151,10 @@ struct Cache::Impl {
 		void* value;
 
 		resp.then([&](Http::Response response) {
-        std::cout << "Response code = " << response.code() << std::endl;
-        auto body = response.body();
-        value = &body;
-    }, Async::IgnoreException);
-
+	        std::cout << "Response code = " << response.code() << std::endl;
+	        auto body = response.body();
+	        value = &body;
+	    	}, Async::IgnoreException);
 		return value;
 	}
 
@@ -171,17 +163,15 @@ struct Cache::Impl {
 
 		string request = '/'+key;
 
-		auto resp = client_.Pistache::Http::Method::Delete(request).send();
+		auto resp = client_.del(request).send();
 
 		int* status;
 
-
-
 		resp.then([&](Http::Response response) {
-        auto body = response.body();
-        int body_int = stoi(body);
-        status = &body_int;
-        }, Async::IgnoreException);
+	        auto body = response.body();
+	        int body_int = stoi(body);
+	        status = &body_int;
+	        }, Async::IgnoreException);
 
 		int dereferenced_status = *status;
 		free(status);
@@ -200,9 +190,9 @@ struct Cache::Impl {
 
 
 		resp.then([&](Http::Response response) {
-        auto body = response.body();
-        index_type body_int = stoi(body);
-        status = &body_int;
+	        auto body = response.body();
+	        index_type body_int = stoi(body);
+	        status = &body_int;
         }, Async::IgnoreException);
 
 		index_type dereferenced_status = *status;
@@ -220,7 +210,6 @@ Cache::Cache(index_type maxmem,
 Cache::~Cache() {
 	// client_.post("/shutdown").send();
 }
-
 
 // Add a <key, value> pair to the cache.
 // If key already exists, it will overwrite the old value.
