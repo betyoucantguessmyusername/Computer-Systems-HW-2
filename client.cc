@@ -15,11 +15,11 @@ using namespace Pistache;
 using namespace Pistache::Http;
 using namespace std;
 
-class Client {
+class myClient {
 private:
 	Cache* cache_;
 
-	Client(uint32_t cache_length, Cache::hash_func hasher) {
+	myClient(uint32_t cache_length, Cache::hash_func hasher) {
 		cache_ = new Cache(cache_length*sizeof(uint32_t), hasher);
 	};
 public:
@@ -46,7 +46,7 @@ public:
 
 };
 
-void Client::Client() {
+void myClient::myClient() {
 	cache_();
 }
 
@@ -54,19 +54,20 @@ void Client::Client() {
 
 int main(int argc, char* argv[])
 {
+	myClient* client = myClient();
 	// args to main: client [fn args]
 	if (argc==2) {
 		if (argv[1] == "shutdown") {
-			shutdown();
+			client->shutdown();
 		} else if (argv[1] == "memsize") { //Should this be space_used? since the terminal is calling it like a cache? idk
-			space_used();
+			client->space_used();
 		} else {
-			del(argv[1]);	
+			client->del(argv[1]);	
 		}
 	} else if (argc == 3) {
-		get(argv[1],argv[2]);
+		client->get(argv[1],atoi(argv[2]));
 	} else if (argc == 4) {
-		set(argv[1],argv[2],argv[3]);
+		client->set(argv[1],argv[2],atoi(argv[3]));
 	} else {
 		cout << "wrong temrinal line input " << endl;
 	}
